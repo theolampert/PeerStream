@@ -1,6 +1,7 @@
 import MultipeerConnectivity
 
-enum PeerStreamMessage {
+
+public enum PeerStreamMessage {
     case onData(
         data: Data,
         peer: MCPeerID
@@ -12,25 +13,26 @@ enum PeerStreamMessage {
     case onReceiveInvitation(
         peer: MCPeerID
     )
+    case onLostPeer(
+        peer: MCPeerID
+    )
 }
 
-class PeerStream: AsyncSequence {
-    typealias Element = PeerStreamMessage
-    typealias AsyncIterator = AsyncThrowingStream<PeerStreamMessage, Error>.Iterator
-
-    #if os(macOS)
-    private let myPeerId = MCPeerID(displayName: Host.current().localizedName!)
-    #else
-    private let myPeerId = MCPeerID(displayName: UIDevice.current.name)
-    #endif
+public final class PeerStream: AsyncSequence {
+    public typealias Element = PeerStreamMessage
+    public typealias AsyncIterator = AsyncThrowingStream<PeerStreamMessage, Error>.Iterator
     
     private var stream: AsyncThrowingStream<Element, Error>?
     private var continuation: AsyncThrowingStream<Element, Error>.Continuation?
     private var session: MCSession
-    private var multipeerSession = MultipeerSession()
+    private var multipeerSession: MultipeerSession
 
-    init(url: String) {
-        session = MCSession(peer: myPeerId, securityIdentity: nil, encryptionPreference: .none)
+    public init(
+        serviceType: String,
+        peerID: MCPeerID
+    ) {
+        multipeerSession = MultipeerSession(serviceType: serviceType, peerID: peerID)
+        session = MCSession(peer: peerID, securityIdentity: nil, encryptionPreference: .none)
         stream = AsyncThrowingStream { continuation in
             self.continuation = continuation
             self.continuation?.onTermination = { @Sendable [session] _ in
@@ -40,7 +42,7 @@ class PeerStream: AsyncSequence {
         multipeerSession.continuation = continuation
     }
     
-    func makeAsyncIterator() -> AsyncIterator {
+    public func makeAsyncIterator() -> AsyncIterator {
         guard let stream = stream else {
             fatalError("stream was not initialized")
         }
@@ -48,7 +50,11 @@ class PeerStream: AsyncSequence {
         return stream.makeAsyncIterator()
     }
     
-    func send(data: Data, peers: [MCPeerID], with dataMode: MCSessionSendDataMode = .reliable) throws {
+    public func send(
+        data: Data,
+        peers: [MCPeerID],
+        with dataMode: MCSessionSendDataMode = .reliable
+    ) throws {
         try session.send(data, toPeers: peers, with: dataMode)
     }
 }

@@ -1,10 +1,14 @@
 import XCTest
 import PeerStream
+import MultipeerConnectivity
 
 final class PeerStreamTests: XCTestCase {
-    func testExample() throws {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct
-        // results.
+    func testInit() throws {
+        #if os(macOS)
+        let myPeerId = MCPeerID(displayName: Host.current().localizedName!)
+        #else
+        let myPeerId = MCPeerID(displayName: UIDevice.current.name)
+        #endif
+        let peerStream = PeerStream(serviceType: "test-service", peerID: myPeerId)
     }
 }

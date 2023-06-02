@@ -8,31 +8,25 @@
 import MultipeerConnectivity
 
 class MultipeerSession: NSObject, ObservableObject {
-    private let serviceType = "morsel-sync"
-    #if os(macOS)
-    private let myPeerId = MCPeerID(displayName: Host.current().localizedName!)
-    #else
-    private let myPeerId = MCPeerID(displayName: UIDevice.current.name)
-    #endif
     private let serviceAdvertiser: MCNearbyServiceAdvertiser
     private let serviceBrowser: MCNearbyServiceBrowser
     private let session: MCSession
     
     var continuation: AsyncThrowingStream<PeerStreamMessage, Error>.Continuation?
     
-    override init() {
+    init(serviceType: String, peerID: MCPeerID) {
         session = MCSession(
-            peer: myPeerId,
+            peer: peerID,
             securityIdentity: nil,
             encryptionPreference: .none
         )
         serviceAdvertiser = MCNearbyServiceAdvertiser(
-            peer: myPeerId,
+            peer: peerID,
             discoveryInfo: nil,
             serviceType: serviceType
         )
         serviceBrowser = MCNearbyServiceBrowser(
-            peer: myPeerId,
+            peer: peerID,
             serviceType: serviceType
         )
 
@@ -90,6 +84,7 @@ extension MultipeerSession: MCNearbyServiceBrowserDelegate {
         _ browser: MCNearbyServiceBrowser,
         lostPeer peerID: MCPeerID
     ) {
+        continuation?.yield(.onLostPeer(peer: peerID))
     }
 }
 
